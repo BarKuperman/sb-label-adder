@@ -4,6 +4,8 @@ This tool adds OpenStreetMap labels for Cities, Suburbs, and Neighborhoods to a 
 
 For Windows users, a graphical user interface (GUI) is provided. Command-line execution is also supported for both Windows and Linux environments.
 
+*(If you want to do this entire process manually, an older unmaintained guide is available [here](https://gist.github.com/BarKuperman/86a16473d2ba321cea42c943ceb78f1b)).*
+
 ---
 
 ## 1. Download the Tool
@@ -72,7 +74,7 @@ Navigate to the directory containing the scripts and execute the shell script, p
 # Explicit bounding box definition
 ./build_labeled_map.sh \
   --base-map /path/to/base_map.pmtiles \
-  --bbox "-38.22489374,144.444061,-37.48191108,145.55079102"
+  --bbox "south,west,north,east"
 ```
 
 The flags `--prefer-english`, `--force-english`, and `--san` can be appended to the command line execution as needed.
