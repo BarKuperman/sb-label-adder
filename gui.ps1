@@ -60,7 +60,7 @@ $form.Controls.Add($checkBoxForceEnglish)
 $checkBoxSan = New-Object System.Windows.Forms.CheckBox
 $checkBoxSan.Location = New-Object System.Drawing.Point(140,140)
 $checkBoxSan.Size = New-Object System.Drawing.Size(350,20)
-$checkBoxSan.Text = "--san: Combine suburbs into the neighborhoods layer"
+$checkBoxSan.Text = "--san: Move OSM suburb tags to neighborhoods layer"
 $form.Controls.Add($checkBoxSan)
 
 $buttonRun = New-Object System.Windows.Forms.Button

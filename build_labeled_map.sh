@@ -36,7 +36,7 @@ Optional:
   --workdir <dir>                Working directory (default: base map directory)
   --prefer-english               Prefer name:en for labels when available
   --force-english                Use only name:en labels (drop features without name:en)
-  --san                          Combine suburbs into the neighborhoods layer
+  --san                          Move place=suburb labels to the neighborhoods layer
   -h, --help                     Show this help
 EOF
 }
@@ -412,21 +412,24 @@ mkdir -p "$TEMPDIR"
 
 cities_geojson="$TEMPDIR/cities.geojson"
 suburbs_geojson="$TEMPDIR/suburbs.geojson"
+suburbs_only_geojson="$TEMPDIR/suburbs_only.geojson"
 neighborhoods_geojson="$TEMPDIR/neighborhoods.geojson"
 labels_only="$TEMPDIR/labels_only.pmtiles"
 
 tmp_cities="$TEMPDIR/.cities_overpass.json"
 tmp_suburbs="$TEMPDIR/.suburbs_overpass.json"
+tmp_suburbs_only="$TEMPDIR/.suburbs_only_overpass.json"
 tmp_neighborhoods="$TEMPDIR/.neighborhoods_overpass.json"
 
 cleanup() {
-  rm -f "$tmp_cities" "$tmp_suburbs" "$tmp_neighborhoods"
+  rm -f "$tmp_cities" "$tmp_suburbs" "$tmp_suburbs_only" "$tmp_neighborhoods"
 }
 trap cleanup EXIT
 
 cities_query="$(build_query 'city,town')"
-suburbs_query="$(build_query 'suburb,village')"
-neighborhoods_query="$(build_query 'neighbourhood,hamlet')"
+suburbs_query="$(build_query 'village,borough')"
+suburbs_only_query="$(build_query 'suburb')"
+neighborhoods_query="$(build_query 'neighbourhood,hamlet,quarter')"
 
 query_overpass_json "$cities_query" "$tmp_cities"
 count="$(overpass_to_geojson "$tmp_cities" "$cities_geojson" "$PREFER_ENGLISH" "$FORCE_ENGLISH")"
@@ -436,6 +439,9 @@ query_overpass_json "$suburbs_query" "$tmp_suburbs"
 count="$(overpass_to_geojson "$tmp_suburbs" "$suburbs_geojson" "$PREFER_ENGLISH" "$FORCE_ENGLISH")"
 log "Wrote $count features to $(basename "$suburbs_geojson")"
 
+query_overpass_json "$suburbs_only_query" "$tmp_suburbs_only"
+count="$(overpass_to_geojson "$tmp_suburbs_only" "$suburbs_only_geojson" "$PREFER_ENGLISH" "$FORCE_ENGLISH")"
+
 query_overpass_json "$neighborhoods_query" "$tmp_neighborhoods"
 count="$(overpass_to_geojson "$tmp_neighborhoods" "$neighborhoods_geojson" "$PREFER_ENGLISH" "$FORCE_ENGLISH")"
 log "Wrote $count features to $(basename "$neighborhoods_geojson")"
@@ -444,13 +450,15 @@ log "Building labels_only.pmtiles with tippecanoe..."
 if [[ "$SUBURBS_AS_NEIGHBORHOODS" -eq 1 ]]; then
   tippecanoe -Z 6 -z 15 -r 1 -y name -o "$labels_only" \
     -L city_labels:"$cities_geojson" \
-    -L neighborhood_labels:"$suburbs_geojson" \
+    -L suburb_labels:"$suburbs_geojson" \
+    -L neighborhood_labels:"$suburbs_only_geojson" \
     -L neighborhood_labels:"$neighborhoods_geojson" \
     --force
 else
   tippecanoe -Z 6 -z 15 -r 1 -y name -o "$labels_only" \
     -L city_labels:"$cities_geojson" \
     -L suburb_labels:"$suburbs_geojson" \
+    -L suburb_labels:"$suburbs_only_geojson" \
     -L neighborhood_labels:"$neighborhoods_geojson" \
     --force
 fi

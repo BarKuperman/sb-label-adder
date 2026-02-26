@@ -38,17 +38,19 @@ Once WSL is configured, you can launch the GUI.
 1. Open the folder where the tool was extracted.
 2. Double-click **`GUI.bat`**.
 
-### How to use the GUI:
-*   **Base Map**: Click the **Browse...** button to select your unlabeled `.pmtiles` base map file.
-*   **BBox (Optional)**: If you need to restrict the mapping data to a specific area, input a custom bounding box in the format `south,west,north,east`. In most cases, this can be left blank, and the script will automatically determine the bounds from the map file.
-*   **Generate Map**: Click the generation button. A terminal window will appear, and the tool will download the OpenStreetMap data and merge it into a new file.
+### How to use the GUI
 
-### Custom Setting Checkboxes:
+* **Base Map**: Click the **Browse...** button to select your unlabeled `.pmtiles` base map file.
+* **BBox (Optional)**: If you need to restrict the mapping data to a specific area, input a custom bounding box in the format `south,west,north,east`. In most cases, this can be left blank, and the script will automatically determine the bounds from the map file.
+* **Generate Map**: Click the generation button. A terminal window will appear, and the tool will download the OpenStreetMap data and merge it into a new file.
+
+### Custom Setting Checkboxes
+
 These optional flags adjust how the labels are processed:
 
-*   **`--prefer-english`**: Uses English text for labels where available on OpenStreetMap, falling back to local names if not.
-*   **`--force-english`**: Strictly requires English labels. Any label without an English translation is ignored and removed. This can resolve in-game crashes caused by unsupported alphabets (such as Hebrew).
-*   **`--san` (Combine suburbs into neighborhoods)**: OpenStreetMap physically separates "Suburbs" from "Neighborhoods." Check this box to merge them into a single `neighborhood_labels` layer. This is useful if the local terminology considers OpenStreetMap "suburbs" to be neighborhoods.
+* **`--prefer-english`**: Uses English text for labels where available on OpenStreetMap, falling back to local names if not.
+* **`--force-english`**: Strictly requires English labels. Any label without an English translation is ignored and removed. This can resolve in-game crashes caused by unsupported alphabets (such as Hebrew).
+* **`--san` (Move only `place=suburb` to neighborhoods)**: Keeps `place=village` and `place=borough` in `suburb_labels`, but routes only OpenStreetMap `place=suburb` labels into `neighborhood_labels`.
 
 *(When the generation finishes, press any key to close the terminal.)*
 
@@ -59,6 +61,7 @@ These optional flags adjust how the labels are processed:
 If you are using Linux, execute the tool through the command line.
 
 **Install the base requirements first:**
+
 ```bash
 sudo apt update
 sudo apt install -y python3 curl build-essential libsqlite3-dev zlib1g-dev git
@@ -84,7 +87,7 @@ The flags `--prefer-english`, `--force-english`, and `--san` can be appended to 
 ## 5. Retrieve the Final Map
 
 1. **One-Time Install Prompt**: On the first execution, you may be prompted: `tippecanoe/tile-join are not installed. Install now? [y/n]`. Type `y`, press Enter, and input your password to install the required map processing tools.
-2. Once the operation completes, the generated map will be saved in the same directory as the original map, named **`final_map.pmtiles`**. 
+2. Once the operation completes, the generated map will be saved in the same directory as the original map, named **`final_map.pmtiles`**.
 3. *Previewing Output:* The script generates a `working_files/` subfolder next to your maps containing intermediate files. You can drag and drop the `labels_only.pmtiles` file from this folder into [https://pmtiles.io/](https://pmtiles.io/) in your web browser to preview the generated label layer before using the combined map in-game.
 
 ---
@@ -92,9 +95,11 @@ The flags `--prefer-english`, `--force-english`, and `--san` can be appended to 
 ## Troubleshooting
 
 ### `Failed to infer bbox ... Pass --bbox manually`
+
 **Cause**: The selected PMTiles map lacks a valid internal boundary definition.
 **Fix**: Provide the `--bbox` argument manually (or via the BBox text box in the GUI) so the script targets the correct geographic area. The format must be comma-separated: `south,west,north,east` (e.g., `-38.22,144.44,-37.48,145.55`).
 
 ### Overpass API Timeouts or Errors
+
 **Cause**: The OpenStreetMap API servers enforce rate limits and may occasionally time out on dense requests.
 **Fix**: The script includes a retry mechanism with a fallback mirror. If requests continue to fail, wait a few minutes and try the generation process again.
