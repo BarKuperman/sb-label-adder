@@ -425,8 +425,8 @@ cleanup() {
 trap cleanup EXIT
 
 cities_query="$(build_query 'city,town')"
-suburbs_query="$(build_query 'suburb')"
-neighborhoods_query="$(build_query 'neighbourhood')"
+suburbs_query="$(build_query 'suburb,village')"
+neighborhoods_query="$(build_query 'neighbourhood,hamlet')"
 
 query_overpass_json "$cities_query" "$tmp_cities"
 count="$(overpass_to_geojson "$tmp_cities" "$cities_geojson" "$PREFER_ENGLISH" "$FORCE_ENGLISH")"
