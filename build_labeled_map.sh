@@ -576,7 +576,7 @@ else
 fi
 
 log "Merging base map and labels..."
-tile-join -o "$OUTPUT" "$BASE_MAP" "$labels_only"
+tile-join --force -o "$OUTPUT" "$BASE_MAP" "$labels_only"
 if bounds_preserved="$(copy_bounds_from_base "$BASE_MAP" "$OUTPUT" 2>"$tmp_copy_bounds_err")"; then
   log "Preserved output bounds from base map (metadata + header): $bounds_preserved"
 else
@@ -586,7 +586,7 @@ else
       log "copy_bounds_from_base: $err_line"
     done < "$tmp_copy_bounds_err"
   fi
-  tile-join -o "$OUTPUT" "$BASE_MAP" "$labels_only"
+  tile-join --force -o "$OUTPUT" "$BASE_MAP" "$labels_only"
   log "Continuing with tile-join output metadata."
 fi
 
