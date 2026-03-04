@@ -27,6 +27,13 @@ To use this tool, download the repository contents:
 
 The map-generation engine runs on Linux. To use this tool on Windows, **WSL (Windows Subsystem for Linux)** must be installed.
 
+Before running the GUI, install the required packages inside your WSL distro (for example Ubuntu):
+
+```bash
+sudo apt update
+sudo apt install -y python3 curl build-essential libsqlite3-dev zlib1g-dev git
+```
+
 > **Note:** If you do not have WSL installed and do not know what it is, it is recommended that you do not use this tool. This tool requires a functioning WSL environment to process the maps.
 
 ---
