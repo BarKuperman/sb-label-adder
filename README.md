@@ -72,10 +72,10 @@ Navigate to the directory containing the scripts and execute the shell script, p
 
 ```bash
 # Automatic bounding box detection
-./build_labeled_map.sh --base-map /path/to/base_map.pmtiles
+bash ./build_labeled_map.sh --base-map /path/to/base_map.pmtiles
 
 # Explicit bounding box definition
-./build_labeled_map.sh \
+bash ./build_labeled_map.sh \
   --base-map /path/to/base_map.pmtiles \
   --bbox "south,west,north,east"
 ```
@@ -103,3 +103,18 @@ The flags `--prefer-english`, `--force-english`, and `--san` can be appended to 
 
 **Cause**: The OpenStreetMap API servers enforce rate limits and may occasionally time out on dense requests.
 **Fix**: The script includes a retry mechanism with a fallback mirror. If requests continue to fail, wait a few minutes and try the generation process again.
+
+### `/usr/bin/env: 'bash\r': No such file or directory` (CRLF line endings)
+
+**Cause**: `build_labeled_map.sh` was saved with Windows CRLF line endings instead of Unix LF.
+
+**Fix (WSL/Linux terminal)**:
+
+```bash
+sed -i 's/\r$//' build_labeled_map.sh
+chmod +x build_labeled_map.sh
+```
+
+Then run the script again.
+
+**Fix (Windows GUI)**: The GUI runner already normalizes `build_labeled_map.sh` automatically before execution.

@@ -100,6 +100,9 @@ $buttonRun.Add_Click({
     Write-Host "  Subway Builder Label Adder is running  "
     Write-Host "=========================================`n"
     
+    # Normalize script line endings inside WSL to avoid '/usr/bin/env: bash\r' failures.
+    & wsl sh -lc "sed -i 's/\r$//' ./build_labeled_map.sh"
+    
     # Properly pass the array to the executable
     & wsl @argList
     
