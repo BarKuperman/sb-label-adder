@@ -18,7 +18,7 @@ log() {
 }
 
 die() {
-  printf '[label-adder] ERROR: %s\n' "$1" >&2
+  printf 'ERROR: %s\n' "$1" >&2
   exit 1
 }
 
@@ -92,7 +92,7 @@ install_tippecanoe() {
 
 prompt_install_tippecanoe() {
   while true; do
-    printf '[label-adder] tippecanoe/tile-join are not installed. Install now? [y/n]: '
+    printf 'tippecanoe/tile-join are not installed. Install now? [y/n]: '
     read -r reply
     case "${reply,,}" in
       y|yes)
