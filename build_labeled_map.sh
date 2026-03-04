@@ -14,7 +14,7 @@ FORCE_ENGLISH=0
 SUBURBS_AS_NEIGHBORHOODS=0
 
 log() {
-  printf '[label-adder] %s\n' "$1"
+  printf '%s\n' "$1" >&2
 }
 
 die() {
