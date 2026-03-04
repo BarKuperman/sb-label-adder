@@ -14,11 +14,11 @@ FORCE_ENGLISH=0
 SUBURBS_AS_NEIGHBORHOODS=0
 
 log() {
-  printf '[label-adder] %s\n' "$1"
+  printf '%s\n' "$1" >&2
 }
 
 die() {
-  printf '[label-adder] ERROR: %s\n' "$1" >&2
+  printf 'ERROR: %s\n' "$1" >&2
   exit 1
 }
 
@@ -92,7 +92,7 @@ install_tippecanoe() {
 
 prompt_install_tippecanoe() {
   while true; do
-    printf '[label-adder] tippecanoe/tile-join are not installed. Install now? [y/n]: '
+    printf 'tippecanoe/tile-join are not installed. Install now? [y/n]: '
     read -r reply
     case "${reply,,}" in
       y|yes)
@@ -232,6 +232,117 @@ if not valid_bbox(south, west, north, east):
     fail("Both header bbox and metadata.bounds are invalid")
 
 print(f"{south},{west},{north},{east}")
+PY
+}
+
+copy_bounds_from_base() {
+  local base_pmtiles="$1"
+  local output_pmtiles="$2"
+  python3 - "$base_pmtiles" "$output_pmtiles" <<'PY'
+import gzip
+import json
+import struct
+import sys
+
+base_path = sys.argv[1]
+out_path = sys.argv[2]
+
+def die(msg):
+    print(msg, file=sys.stderr)
+    raise SystemExit(1)
+
+def u64(buf, off): return struct.unpack_from('<Q', buf, off)[0]
+def set_u64(buf, off, val): struct.pack_into('<Q', buf, off, val)
+def set_i32(buf, off, val): struct.pack_into('<i', buf, off, val)
+
+def read_file(path):
+    with open(path, 'rb') as f:
+        return bytearray(f.read())
+
+def ensure_pmtiles_v3(buf, path):
+    if len(buf) < 127 or buf[:7] != b'PMTiles' or buf[7] != 3:
+        die(f"Invalid PMTiles v3 file: {path}")
+
+def read_metadata(buf, path):
+    off, length, comp = u64(buf, 24), u64(buf, 32), buf[97]
+    if length == 0 or off + length > len(buf):
+        die(f"Invalid metadata block in {path}")
+    raw = bytes(buf[off:off + length])
+    if comp == 2:
+        raw = gzip.decompress(raw)
+    elif comp != 1:
+        die(f"Unsupported metadata compression {comp} in {path}")
+    meta = json.loads(raw.decode('utf-8'))
+    if not isinstance(meta, dict):
+        die(f"Metadata JSON must be an object in {path}")
+    return meta, off, length, comp
+
+def encode_metadata(meta, comp):
+    raw = json.dumps(meta, ensure_ascii=False, separators=(',', ':')).encode('utf-8')
+    if comp == 2: return gzip.compress(raw)
+    if comp == 1: return raw
+    die(f"Unsupported metadata compression {comp}")
+
+def parse_bounds(value):
+    try:
+        if isinstance(value, str):
+            west, south, east, north = [float(x.strip()) for x in value.split(',')]
+        elif isinstance(value, (list, tuple)) and len(value) == 4:
+            west, south, east, north = [float(x) for x in value]
+        else:
+            return None
+    except Exception:
+        return None
+    if not (-180 <= west < east <= 180 and -90 <= south < north <= 90):
+        return None
+    return west, south, east, north
+
+def header_bounds(buf):
+    west = struct.unpack_from('<i', buf, 102)[0] / 1e7
+    south = struct.unpack_from('<i', buf, 106)[0] / 1e7
+    east = struct.unpack_from('<i', buf, 110)[0] / 1e7
+    north = struct.unpack_from('<i', buf, 114)[0] / 1e7
+    return parse_bounds([west, south, east, north])
+
+base = read_file(base_path)
+out = read_file(out_path)
+ensure_pmtiles_v3(base, base_path)
+ensure_pmtiles_v3(out, out_path)
+
+base_meta, _, _, _ = read_metadata(base, base_path)
+out_meta, out_meta_off, out_meta_len, out_meta_comp = read_metadata(out, out_path)
+
+bounds = parse_bounds(base_meta.get('bounds')) or header_bounds(base)
+if bounds is None:
+    die("Base PMTiles has no valid bounds in metadata or header")
+west, south, east, north = bounds
+bounds_meta_value = base_meta.get('bounds') if parse_bounds(base_meta.get('bounds')) else [west, south, east, north]
+
+merged = dict(base_meta)
+for k in ('vector_layers', 'tilestats'):
+    if k in out_meta:
+        merged[k] = out_meta[k]
+merged['bounds'] = bounds_meta_value
+new_meta = encode_metadata(merged, out_meta_comp)
+
+rebuilt = bytearray(out[:out_meta_off]) + new_meta + out[out_meta_off + out_meta_len:]
+delta = len(new_meta) - out_meta_len
+set_u64(rebuilt, 32, len(new_meta))
+if delta:
+    for off in (40, 56):
+        cur = u64(rebuilt, off)
+        if cur > out_meta_off:
+            set_u64(rebuilt, off, cur + delta)
+
+set_i32(rebuilt, 102, int(round(west * 1e7)))
+set_i32(rebuilt, 106, int(round(south * 1e7)))
+set_i32(rebuilt, 110, int(round(east * 1e7)))
+set_i32(rebuilt, 114, int(round(north * 1e7)))
+
+with open(out_path, 'wb') as f:
+    f.write(rebuilt)
+
+print(bounds_meta_value if isinstance(bounds_meta_value, str) else json.dumps(bounds_meta_value, ensure_ascii=False))
 PY
 }
 
@@ -420,9 +531,10 @@ tmp_cities="$TEMPDIR/.cities_overpass.json"
 tmp_suburbs="$TEMPDIR/.suburbs_overpass.json"
 tmp_suburbs_only="$TEMPDIR/.suburbs_only_overpass.json"
 tmp_neighborhoods="$TEMPDIR/.neighborhoods_overpass.json"
+tmp_copy_bounds_err="$TEMPDIR/.copy_bounds_error.log"
 
 cleanup() {
-  rm -f "$tmp_cities" "$tmp_suburbs" "$tmp_suburbs_only" "$tmp_neighborhoods"
+  rm -f "$tmp_cities" "$tmp_suburbs" "$tmp_suburbs_only" "$tmp_neighborhoods" "$tmp_copy_bounds_err"
 }
 trap cleanup EXIT
 
@@ -464,6 +576,18 @@ else
 fi
 
 log "Merging base map and labels..."
-tile-join -o "$OUTPUT" "$BASE_MAP" "$labels_only"
+tile-join --force -o "$OUTPUT" "$BASE_MAP" "$labels_only"
+if bounds_preserved="$(copy_bounds_from_base "$BASE_MAP" "$OUTPUT" 2>"$tmp_copy_bounds_err")"; then
+  log "Preserved output bounds from base map (metadata + header): $bounds_preserved"
+else
+  log "WARNING: Metadata copying failed. Rebuilding output without metadata copy."
+  if [[ -s "$tmp_copy_bounds_err" ]]; then
+    while IFS= read -r err_line; do
+      log "copy_bounds_from_base: $err_line"
+    done < "$tmp_copy_bounds_err"
+  fi
+  tile-join --force -o "$OUTPUT" "$BASE_MAP" "$labels_only"
+  log "Continuing with tile-join output metadata."
+fi
 
 log "Done. Final map created at: $OUTPUT"
